@@ -1,0 +1,12 @@
+# Local configuration and anything that could contain mail data or secrets
+bridge/accounts.json
+bridge/imap-accounts.json
+bridge/signature-settings.json
+bridge/signature*.html
+bridge/runtime/
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.dpapi
+*.sqlite3*

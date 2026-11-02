@@ -1,0 +1,4 @@
+[
+  { "email": "you@outlook.com", "type": "Outlook", "description": "Personal" },
+  { "email": "you@your-company.com", "type": "Office365", "description": "Work" }
+]

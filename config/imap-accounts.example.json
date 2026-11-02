@@ -1,0 +1,15 @@
+[
+  {
+    "email": "you@example.com",
+    "username": "you@example.com",
+    "host": "imap.example.com",
+    "smtp_host": "smtp.example.com",
+    "imap_port": 993,
+    "smtp_port": 465,
+    "aliases": ["alias@example.com"],
+    "credential_file": "imap-you-example-com.dpapi",
+    "display_name": "Your Name",
+    "signature_file": "signature.html",
+    "signature_name": "Default"
+  }
+]
