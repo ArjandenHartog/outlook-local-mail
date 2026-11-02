@@ -167,7 +167,10 @@ def evaluate_reports(reports, target, recipients):
         if not match:
             continue
         row = report_row(report, kind, match, recipients)
-        (weak if match == 'subject_only' else found[kind]).append(row)
+        # Mail merges send many messages with the same subject within seconds: an NDR that matches only on
+        # subject/time and does not mention any recipient of this message belongs to a sibling message.
+        sibling = kind == 'ndr' and match == 'original_subject_time' and not row['recipients']
+        (weak if match == 'subject_only' or sibling else found[kind]).append(row)
     return found, weak
 
 

@@ -89,6 +89,18 @@ class PureLogicTests(unittest.TestCase):
         self.assertEqual(result['failed_recipients'], ['bob@example.test'])
         self.assertFalse(result['delivery_verified'])
 
+    def test_ndr_for_sibling_of_same_mail_merge_is_not_a_bounce_for_this_message(self):
+        report = {'message_class': 'REPORT.IPM.Note.NDR', 'subject': 'Undeliverable: Offerte',
+                  'original_subject': 'Offerte', 'original_submit': (SENT_AT + dt.timedelta(seconds=20)).isoformat(),
+                  'body': 'Delivery to carol@example.test failed.'}
+        found, weak = delivery.evaluate_reports([report], self.base(), ['bob@example.test'])
+        self.assertEqual(found['ndr'], [])
+        self.assertEqual(len(weak), 1)
+        self.assertFalse(delivery.finalize(self.base(reports=found, weak_reports=weak))['bounce_detected'])
+        report['body'] += ' Also bob@example.test failed.'
+        found, _ = delivery.evaluate_reports([report], self.base(), ['bob@example.test'])
+        self.assertEqual(len(found['ndr']), 1)
+
     def test_subject_only_ndr_is_only_a_possible_bounce(self):
         reports = [{'message_class': 'REPORT.IPM.Note.NDR', 'subject': 'Undeliverable: Offerte', 'body': 'no id'}]
         found, weak = delivery.evaluate_reports(reports, self.base(), ['bob@example.test'])

@@ -9,6 +9,7 @@ import win32com.client
 def analyze():
     pythoncom.CoInitialize()
     app = win32com.client.GetActiveObject('Outlook.Application')
+    (Path(__file__).resolve().parent/'runtime').mkdir(exist_ok=True)
     report = {'checked_at':dt.datetime.now(dt.timezone.utc).isoformat(),
               'scope':'local cached Outlook mail only', 'mailboxes':[], 'errors':[]}
     for account in app.Session.Accounts:
@@ -49,7 +50,7 @@ def analyze():
         for sender,data in senders.items():
             data['folders']=dict(data['folders']); box['senders'][sender]=data
         report['mailboxes'].append(box)
-    Path('runtime/filing-analysis.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
+    (Path(__file__).resolve().parent/'runtime/filing-analysis.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
     for b in report['mailboxes']:
         print(json.dumps({'email':b['email'],'folders':len(b['folders']),'cached_mails':b['mail_count'],
             'largest_folders':sorted(b['folders'],key=lambda f:f['mail_count'],reverse=True)[:7],

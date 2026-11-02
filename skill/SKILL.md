@@ -94,6 +94,12 @@ Read the draft back first (mailbox, recipients, content, signature). Then:
 `in_outbox` / `not_found`. After an uncertain outcome never create a new draft to resend;
 a local send journal prevents double submission, also across restarts.
 
+## Monitoring helpers (read-only)
+
+`scripts/watch.py drafts` lists duplicate drafts (`suggested_delete`) and stale drafts; `scripts/watch.py bounces
+--days 3` reports new bounces once. Report findings to the user; run `delete-draft` only after they agree, and never
+re-send because of a bounce. `ambiguous_ndrs` are NDRs that cannot be tied to one message (mail merges).
+
 ## Safety rules
 
 - Never put passwords, tokens or mailbox copies in logs, issues or repository files.

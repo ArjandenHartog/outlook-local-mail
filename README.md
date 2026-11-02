@@ -21,17 +21,32 @@ your own mailboxes, without an OAuth app or any cloud service.
 - Outlook Classic (the "classic" desktop app, not "new Outlook") for the Outlook accounts
 - `pip install -r bridge/requirements.txt` (only `pywin32`)
 
-## Setup
+[![tests](https://github.com/ArjandenHartog/outlook-local-mail/actions/workflows/test.yml/badge.svg)](https://github.com/ArjandenHartog/outlook-local-mail/actions/workflows/test.yml)
+
+## Quick install
 
 ```powershell
 git clone https://github.com/ArjandenHartog/outlook-local-mail
 cd outlook-local-mail
-py -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r bridge\requirements.txt
+.\install.ps1 -ScheduleTask -LinkSkill both
 ```
 
-1. **Outlook accounts** — sign in to your accounts in Outlook Classic, then copy
-   `config/accounts.example.json` to `bridge/accounts.json` and list the same addresses.
+`install.ps1` creates `.venv`, installs the dependencies, **detects the accounts signed in to Outlook Classic**
+(read-only, writes `bridge\accounts.json`), runs the tests, and prints `status`. Optional switches:
+`-ScheduleTask` registers a logon task that keeps the service running, `-LinkSkill claude|codex|both`
+links `skill\` into `%USERPROFILE%\.claude\skills` / `.codex\skills`, `-SkipTests`, `-SkipAccounts`.
+
+## Updating
+
+```powershell
+.\update.ps1            # latest release tag (tests, then restarts the service)
+.\update.ps1 -Ref main  # or follow main
+```
+
+## Manual setup / extra mailboxes
+
+1. **Outlook accounts** — normally done by `install.ps1`. By hand: copy
+   `config/accounts.example.json` to `bridge/accounts.json` and list the addresses signed in to Outlook Classic.
 2. **Direct IMAP (optional)** — store the password (not echoed, verified, nothing is sent):
 
    ```powershell
@@ -74,6 +89,29 @@ outside this repository, set `OUTLOOK_LOCAL_BRIDGE` to the `bridge` directory.
 item in place; IMAP appends the new version, verifies it and removes the old UID (a new ID is returned).
 Only unsent drafts in the mailbox's Drafts folder are accepted. Nothing is ever sent by these commands.
 
+## Monitoring (read-only)
+
+`skill/scripts/watch.py` is meant for a scheduled agent run or a manual check; it never sends, edits or deletes:
+
+```powershell
+.\.venv\Scripts\python.exe skill\scripts\watch.py drafts            # duplicate drafts + drafts older than 7 days
+.\.venv\Scripts\python.exe skill\scripts\watch.py bounces --days 3  # new bounces on recently sent mail
+```
+
+- `drafts` groups drafts per mailbox by subject (ignoring `RE:`/`FW:`) and compares recipients and text;
+  only near-identical ones appear in `suggested_delete`. You decide, then run `delete-draft --expect-subject`.
+  Drafts you want left alone go in `bridge/runtime/watch-config.json` (`ignore_drafts`: account + subject regex).
+- `bounces` runs `verify-sent` on recent Sent items (max 40 per run, new ones first, state in
+  `bridge/runtime/watch-state.json`) and reports each bounce once. An NDR that cannot be tied to one message
+  (a mail merge with identical subjects) is reported separately as `ambiguous_ndrs`.
+- The background service also builds the folder-filing analysis for `suggest-folder` by itself on first start
+  and refreshes it weekly (`bridge/runtime/filing-analysis.json`, local only).
+
+## Releases
+
+Pushing a tag such as `v0.2.0` runs the tests and publishes a GitHub release with a zip
+(`.github/workflows/release.yml`). CI (`test.yml`) runs the tests on every push on Windows with Python 3.11 and 3.12.
+
 ## Safety notes
 
 - The service listens on loopback only and requires a random per-run token (`bridge/runtime/session.json`,
@@ -111,8 +149,8 @@ The tests use fakes for Outlook COM, IMAP and SMTP; no mailbox is touched.
   unless Outlook keeps it offline.
 - `update-draft` can replace the body only for drafts whose own text the connector wrote
   (it marks it); otherwise it refuses and changes nothing.
-- Folder-filing suggestions for Outlook need `python analyze_filing.py` (reads your cached mail locally and
-  writes `bridge/runtime/filing-analysis.json`); IMAP suggestions use the index.
+- Folder-filing suggestions for Outlook use `bridge/runtime/filing-analysis.json`, built locally by the
+  background service (or `python bridge/analyze_filing.py`); IMAP suggestions use the index.
 
 ## License
 

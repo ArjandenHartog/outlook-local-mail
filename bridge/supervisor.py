@@ -53,6 +53,23 @@ def schedule_index(force=False):
         stdin=subprocess.DEVNULL,close_fds=True,creationflags=subprocess.CREATE_NO_WINDOW)
     return {'requested':True,'note':'Search data is being updated silently in the background. The current index stays available.'}
 
+def schedule_filing(max_age_days=7, retry_hours=6):
+    """Build/refresh runtime/filing-analysis.json (used by suggest-folder for Outlook) without user action."""
+    import time as _time
+    if not (ROOT / 'accounts.json').exists():
+        return  # no Outlook accounts configured
+    analysis, attempt = RUNTIME / 'filing-analysis.json', RUNTIME / 'filing-analysis.attempt'
+    now = _time.time()
+    if analysis.exists() and now - analysis.stat().st_mtime < max_age_days * 86400:
+        return
+    if attempt.exists() and now - attempt.stat().st_mtime < retry_hours * 3600:
+        return  # do not retry every few minutes when Outlook is not available
+    attempt.write_text(str(int(now)), encoding='utf-8')
+    subprocess.Popen([str(PYTHONW), str(ROOT / 'analyze_filing.py')], cwd=ROOT, stdout=subprocess.DEVNULL,
+                     stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL, close_fds=True,
+                     creationflags=subprocess.CREATE_NO_WINDOW)
+
+
 def main():
     mutex = win32event.CreateMutex(None, False, 'Local\\OutlookLocalMailStartup')
     acquired = win32event.WaitForSingleObject(mutex, 25000)
@@ -61,6 +78,7 @@ def main():
     try:
         if healthy():
             schedule_index()
+            schedule_filing()
             return
         private_runtime()
         with (RUNTIME / 'service-output.log').open('ab') as output, (RUNTIME / 'service-error.log').open('ab') as error:
@@ -71,6 +89,7 @@ def main():
             time.sleep(.25)
             if healthy():
                 schedule_index()
+                schedule_filing()
                 return
         raise RuntimeError('Local service did not start')
     finally:
