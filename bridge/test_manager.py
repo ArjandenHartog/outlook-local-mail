@@ -132,7 +132,7 @@ class BackendTests(unittest.TestCase):
         self.backend.client = None
         explorer = NS(WindowState=2)
         app = NS(Session=self.session, Explorers=[explorer])
-        with patch('win32com.client.GetActiveObject', side_effect=[RuntimeError('closed'), app]), patch('subprocess.Popen') as start:
+        with patch('win32com.client.GetActiveObject', side_effect=[RuntimeError('closed'), app]), patch('subprocess.Popen') as start, patch('pathlib.Path.is_file', return_value=True):
             self.assertIs(self.backend.session(), self.session)
             self.assertEqual(start.call_count, 1)
             self.assertEqual(start.call_args.args[0][-1], '/recycle')
@@ -140,7 +140,7 @@ class BackendTests(unittest.TestCase):
 
     def test_background_start_wait_is_bounded_and_launch_is_throttled(self):
         self.backend.client = None
-        with patch('win32com.client.GetActiveObject', side_effect=RuntimeError('closed')), patch('subprocess.Popen') as start, patch('time.sleep'):
+        with patch('win32com.client.GetActiveObject', side_effect=RuntimeError('closed')), patch('subprocess.Popen') as start, patch('pathlib.Path.is_file', return_value=True), patch('time.sleep'):
             for _ in range(2):
                 with self.assertRaisesRegex(MailError, 'not available yet'):
                     self.backend.session()
